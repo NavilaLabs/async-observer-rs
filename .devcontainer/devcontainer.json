@@ -1,0 +1,22 @@
+{
+  "name": "rust-lib",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/logica",
+  "remoteUser": "navila",
+  "initializeCommand": "chmod +x ./.devcontainer/init.sh && ./.devcontainer/init.sh",
+  "postStartCommand": "chmod +x ./.devcontainer/post_start.sh && ./.devcontainer/post_start.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "vadimcn.vscode-lldb",
+        "tamasfe.even-better-toml",
+        "fill-labs.dependi"
+      ]
+    }
+  },
+  "mounts": [
+    "source=${localEnv:HOME}/.ssh,target=/home/navila/.ssh,type=bind,consistency=cached"
+  ]
+}

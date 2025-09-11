@@ -5,4 +5,4 @@ services:
       dockerfile: .devcontainer/Dockerfile
     command: sleep infinity
     volumes:
-      - ..:/workspaces/rust-lib
+      - ..:/workspaces/async-observer-rs

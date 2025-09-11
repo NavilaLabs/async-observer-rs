@@ -1,8 +1,8 @@
 use async_observer::{Observer, Subject};
+use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::time::{self, Duration};
-use async_trait::async_trait;
-use tracing::{info, Level};
+use tracing::{Level, info};
 use tracing_subscriber::FmtSubscriber;
 
 /// A concrete observer that logs a message.
@@ -44,8 +44,7 @@ async fn main() {
         .with_max_level(Level::INFO)
         .finish();
 
-    tracing::subscriber::set_global_default(subscriber)
-        .expect("setting default subscriber failed");
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
     // Create a new async subject.
     let subject = Arc::new(Subject::default());
@@ -69,7 +68,7 @@ async fn main() {
 
     info!("\nNotifying again. Only the logger and delayed observers should receive the event.");
     subject.notify(&String::from("Second event")).await;
-    
+
     // The `logger_handle` is now dropped by assigning `_` to it.
     // This will trigger the `Drop` implementation and automatically detach the observer.
     info!("\nDropping the logger_handle to trigger automatic detachment.");

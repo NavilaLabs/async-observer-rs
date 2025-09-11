@@ -1,13 +1,13 @@
-use std::sync::{Arc, Weak};
+use async_trait::async_trait;
 use parking_lot::Mutex;
+use std::sync::{Arc, Weak};
 #[cfg(feature = "logging")]
-use tracing::{info, debug, trace};
+use tracing::{debug, info, trace};
 
 /// The `Observer` trait defines the contract for any type that wants to be notified of events.
 ///
-/// It uses `async_trait` to allow for async methods in traits, making it easy to implement
-/// for observers that perform asynchronous operations.
-#[async_trait::async_trait]
+/// It uses async methods in traits to allow for observers that perform asynchronous operations.
+#[async_trait]
 pub trait Observer<T>: Send + Sync {
     /// The update method is called by the `Subject` when a new event occurs.
     ///
@@ -42,7 +42,10 @@ impl<T> Drop for ObserverHandle<T> {
             if let Some(index) = observers.iter().position(|(id, _)| *id == self.id) {
                 observers.remove(index);
                 #[cfg(feature = "logging")]
-                info!("Observer with ID {} automatically detached by drop.", self.id);
+                info!(
+                    "Observer with ID {} automatically detached by drop.",
+                    self.id
+                );
             }
         }
     }
@@ -99,7 +102,10 @@ impl<T: Send + Sync + 'static> Subject<T> {
             true
         } else {
             #[cfg(feature = "logging")]
-            debug!("Could not find observer with ID {} for explicit detachment.", handle.id);
+            debug!(
+                "Could not find observer with ID {} for explicit detachment.",
+                handle.id
+            );
             false
         }
     }

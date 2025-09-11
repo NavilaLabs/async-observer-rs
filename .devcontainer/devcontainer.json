@@ -2,7 +2,7 @@
   "name": "async-observer-rs",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
-  "workspaceFolder": "/workspaces/rust-lib",
+  "workspaceFolder": "/workspaces/async-observer-rs",
   "remoteUser": "navila",
   "initializeCommand": "chmod +x ./.devcontainer/initialize.sh && ./.devcontainer/initialize.sh",
   "postStartCommand": "chmod +x ./.devcontainer/post_start.sh && ./.devcontainer/post_start.sh",

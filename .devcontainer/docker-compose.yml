@@ -5,4 +5,4 @@ services:
       dockerfile: .devcontainer/Dockerfile
     command: sleep infinity
     volumes:
-      - ..:/workspaces/logica
+      - ..:/workspaces/rust-lib

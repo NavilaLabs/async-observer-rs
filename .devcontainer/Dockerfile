@@ -4,7 +4,9 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 RUN apt-get update && apt-get install -y \
   build-essential \
   curl \
-  wget
+  wget \
+  pkg-config \
+  libssl-dev
 
 # Install rust-analyzer (latest release)
 RUN curl -L https://github.com/rust-lang/rust-analyzer/releases/latest/download/rust-analyzer-$(uname -m)-unknown-linux-gnu.gz \

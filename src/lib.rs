@@ -4,6 +4,9 @@ use std::sync::{Arc, Weak};
 #[cfg(feature = "logging")]
 use tracing::{debug, info, trace};
 
+#[cfg(any(feature = "mail-observer", feature = "websocket-observer"))]
+pub mod observers;
+
 /// The `Observer` trait defines the contract for any type that wants to be notified of events.
 ///
 /// It uses async methods in traits to allow for observers that perform asynchronous operations.

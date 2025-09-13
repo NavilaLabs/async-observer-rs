@@ -12,15 +12,34 @@ futures = "0.3"
 parking_lot = "0.12"
 async-trait = "0.1"
 tracing = { version = "0.1", optional = true }
+dashmap = "6.1.0"
+lettre = { version = "0.11.18", default-features = false, features = ["smtp-transport", "tokio1-native-tls", "builder"], optional = true }
+reqwest = { version = "0.12.23", features = ["json"], optional = true }
+serde = { version = "1.0.219", optional = true }
+serde_json = { version = "1.0.143", optional = true }
+tokio = { version = "1", features = ["fs", "sync"], optional = true }
+tokio-tungstenite = { version = "0.27.0", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
 tracing = { version = "0.1" }
 tracing-subscriber = "0.3"
+criterion = { version = "0.7", features = ["async_tokio"] }
 
 [features]
-default = []
+default = ["observers"]
 logging = ["dep:tracing"]
+# observers
+observers = ["observer-channel", "observer-email", "observer-file-logger", "observer-http", "observer-websocket"]
+observer-channel = ["dep:tokio"]
+observer-email = ["dep:lettre"]
+observer-file-logger = ["dep:serde_json", "dep:tokio"]
+observer-http = ["reqwest", "serde"]
+observer-websocket = ["dep:serde_json", "dep:tokio-tungstenite"]
+
+[[bench]]
+name = "bench_observer"
+harness = false
 
 [workspace.lints.clippy]
 # Enforce correctness and best practices

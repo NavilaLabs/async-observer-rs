@@ -1,8 +1,12 @@
-use async_trait::async_trait;
-use parking_lot::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
+
+use async_trait::async_trait;
+use dashmap::DashMap;
 #[cfg(feature = "logging")]
 use tracing::{debug, info, trace};
+
+pub mod observers;
 
 /// The `Observer` trait defines the contract for any type that wants to be notified of events.
 ///
@@ -16,13 +20,15 @@ pub trait Observer<T>: Send + Sync {
 }
 
 /// A type alias for the internal list of observers, to improve readability.
-type ObserverList<T> = Mutex<Vec<(u64, Arc<dyn Observer<T>>)>>;
+/// `DashMap` provides a highly concurrent, lock-free way to store key-value pairs.
+/// Here, the key is the observer ID, and the value is the observer itself.
+type ObserverList<T> = DashMap<u64, Arc<dyn Observer<T>>>;
 
 // A private struct that holds the internal state of the Subject.
 // This allows us to use a `Weak` reference to it from the handle.
 struct SubjectInner<T> {
     observers: ObserverList<T>,
-    next_observer_id: Mutex<u64>,
+    next_observer_id: AtomicU64,
 }
 
 /// A handle for an `Observer`, used to uniquely identify and detach it from the `Subject`.
@@ -35,12 +41,16 @@ pub struct ObserverHandle<T> {
     subject_weak: Weak<SubjectInner<T>>,
 }
 
+impl<T> ObserverHandle<T> {
+    pub fn get_id(&self) -> u64 {
+        self.id
+    }
+}
+
 impl<T> Drop for ObserverHandle<T> {
     fn drop(&mut self) {
         if let Some(subject_arc) = self.subject_weak.upgrade() {
-            let mut observers = subject_arc.observers.lock();
-            if let Some(index) = observers.iter().position(|(id, _)| *id == self.id) {
-                observers.remove(index);
+            if subject_arc.observers.remove(&self.id).is_some() {
                 #[cfg(feature = "logging")]
                 info!(
                     "Observer with ID {} automatically detached by drop.",
@@ -64,8 +74,8 @@ impl<T: Send + Sync + 'static> Subject<T> {
     pub fn new() -> Self {
         Self {
             inner: Arc::new(SubjectInner {
-                observers: Mutex::new(Vec::new()),
-                next_observer_id: Mutex::new(0),
+                observers: DashMap::new(),
+                next_observer_id: AtomicU64::new(0),
             }),
         }
     }
@@ -75,11 +85,8 @@ impl<T: Send + Sync + 'static> Subject<T> {
     /// The observer must be wrapped in `Arc` for shared ownership. Returns a unique handle
     /// that will automatically detach the observer when dropped.
     pub fn attach(&self, observer: Arc<dyn Observer<T>>) -> ObserverHandle<T> {
-        let mut observers = self.inner.observers.lock();
-        let mut next_id = self.inner.next_observer_id.lock();
-        let id = *next_id;
-        *next_id += 1;
-        observers.push((id, observer));
+        let id = self.inner.next_observer_id.fetch_add(1, Ordering::Relaxed);
+        self.inner.observers.insert(id, observer);
         #[cfg(feature = "logging")]
         info!("Attached new observer with ID {}.", id);
 
@@ -93,10 +100,8 @@ impl<T: Send + Sync + 'static> Subject<T> {
     ///
     /// This method consumes the handle and returns `true` if the observer was found
     /// and detached, `false` otherwise.
-    pub fn detach(&self, handle: ObserverHandle<T>) -> bool {
-        let mut observers = self.inner.observers.lock();
-        if let Some(index) = observers.iter().position(|(id, _)| *id == handle.id) {
-            observers.remove(index);
+    pub fn detach(&self, handle_id: u64) -> bool {
+        if self.inner.observers.remove(&handle_id).is_some() {
             #[cfg(feature = "logging")]
             info!("Observer with ID {} explicitly detached.", handle.id);
             true
@@ -117,9 +122,12 @@ impl<T: Send + Sync + 'static> Subject<T> {
     /// does not block others.
     pub async fn notify(&self, data: &T) {
         let observer_arcs: Vec<Arc<dyn Observer<T>>> = {
-            let observers = self.inner.observers.lock();
-            observers.iter().map(|(_, obs)| Arc::clone(obs)).collect()
-        }; // The lock is dropped here
+            self.inner
+                .observers
+                .iter()
+                .map(|item| item.clone())
+                .collect()
+        }; // `DashMap` iterator is safe and does not need a lock
 
         #[cfg(feature = "logging")]
         trace!("Notifying {} observers...", observer_arcs.len());

@@ -64,7 +64,7 @@ async fn main() {
 
     // Explicitly detach the explicit observer using its handle.
     info!("\nExplicitly detaching the explicit observer...");
-    subject.detach(explicit_handle);
+    subject.detach(explicit_handle.get_id());
 
     info!("\nNotifying again. Only the logger and delayed observers should receive the event.");
     subject.notify(&String::from("Second event")).await;
